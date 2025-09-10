@@ -77,12 +77,12 @@ macro_rules! transparent_wrapper {
 		$(#[$attr])*
 		$vis struct $name($target);
 		impl $name {
-			/// Returns a reference to the inner structure.
+			/// Returns an immutable reference to the inner structure.
 			pub const fn as_inner(&self) -> &$target {
 				&self.0
 			}
 
-			/// Returns a reference to this 
+			/// Returns an immutable reference to this structure from a pointer.
 			/// 
 			/// # Safety
 			/// `ptr` must point to a valid, readable inner structure.
