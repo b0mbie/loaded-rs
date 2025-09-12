@@ -33,9 +33,10 @@ pub(crate) trait LibraryImpl {
 }
 
 pub(crate) trait ObjectImpl {
+	fn is_main_program(&self) -> bool;
 	fn base_addr(&self) -> usize;
 	fn segments(&self) -> imp::Segments<'_>;
-	fn symbols(&self) -> Option<imp::Symbols>;
+	fn symbols(&self) -> imp::Symbols;
 	fn symbol(&self, symbols: &imp::Symbols, name: &CStr) -> *mut ();
 	fn library(&self, symbols: imp::Symbols) -> imp::Library;
 }

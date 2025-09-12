@@ -20,6 +20,5 @@ pub fn to_nice_name(name: &[u8]) -> &[u8] {
 	}
 
 	let nice_name = slice_after_last(name, std::path::MAIN_SEPARATOR as u8);
-	let nice_name = slice_before_first(nice_name, b'.');
-	nice_name
+	(slice_before_first(nice_name, b'.')) as _
 }

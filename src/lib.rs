@@ -18,6 +18,10 @@ pub struct Error(imp::Error);
 #[repr(transparent)]
 pub struct Object<'a>(imp::Object<'a>);
 impl Object<'_> {
+	pub fn is_main_program(&self) -> bool {
+		ObjectImpl::is_main_program(&self.0)
+	}
+
 	pub fn base_addr(&self) -> usize {
 		ObjectImpl::base_addr(&self.0)
 	}
@@ -26,8 +30,8 @@ impl Object<'_> {
 		Segments(ObjectImpl::segments(&self.0))
 	}
 
-	pub fn symbols(&self) -> Option<Symbols> {
-		ObjectImpl::symbols(&self.0).map(Symbols)
+	pub fn symbols(&self) -> Symbols {
+		Symbols(ObjectImpl::symbols(&self.0))
 	}
 
 	pub fn symbol(&self, symbols: &Symbols, name: &CStr) -> *mut () {
@@ -188,9 +192,20 @@ mod tests {
 	use crate::*;
 
 	#[test]
-	fn it_works() {
+	fn has_main_program() {
+		let objects = Objects::new();
+		let mut has_main_program = false;
+		objects.for_each(|_, object| {
+			let is_main_program = object.is_main_program();
+			has_main_program = is_main_program;
+			is_main_program
+		}).unwrap();
+		assert!(has_main_program);
+	}
+
+	#[test]
+	fn cant_find_invalid() {
 		let objects = Objects::new();
 		assert_eq!(objects.map_by_name(c"\n", move |_| ()).unwrap(), None);
-		assert_eq!(objects.map_by_name(c"libc", move |_| ()).unwrap(), Some(()));
 	}
 }

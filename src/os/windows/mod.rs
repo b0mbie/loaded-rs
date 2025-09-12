@@ -17,6 +17,7 @@ use ::winapi::{
 		psapi::{
 			GetModuleInformation, MODULEINFO,
 		},
+		winnt::IMAGE_DOS_HEADER,
 	}
 };
 
@@ -96,6 +97,12 @@ lifetime_wrapper! {
 	pub(crate) struct Object for Module;
 }
 impl super::ObjectImpl for Object<'_> {
+	fn is_main_program(&self) -> bool {
+		unsafe extern "C" {
+			static __ImageBase: IMAGE_DOS_HEADER;
+		}
+		unsafe { self.inner.handle == (&__ImageBase as *const _ as _) }
+	}
 	fn base_addr(&self) -> usize {
 		self.inner.handle as _
 	}
@@ -106,8 +113,8 @@ impl super::ObjectImpl for Object<'_> {
 		});
 		::core::iter::once(segment)
 	}
-	fn symbols(&self) -> Option<Symbols> {
-		Some(Symbols)
+	fn symbols(&self) -> Symbols {
+		Symbols
 	}
 	fn symbol(&self, symbols: &Symbols, name: &CStr) -> *mut () {
 		let _ = symbols;

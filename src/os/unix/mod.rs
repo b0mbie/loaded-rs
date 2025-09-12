@@ -59,6 +59,9 @@ pub(crate) type ModuleName<'a> = &'a CStr;
 #[repr(transparent)]
 pub struct Object<'a>(&'a UnixObject);
 impl super::ObjectImpl for Object<'_> {
+	fn is_main_program(&self) -> bool {
+		self.0.is_main_program()
+	}
 	fn base_addr(&self) -> usize {
 		self.0.base_addr()
 	}
@@ -67,8 +70,13 @@ impl super::ObjectImpl for Object<'_> {
 			headers: self.0.headers().iter(),
 		}
 	}
-	fn symbols(&self) -> Option<Symbols> {
-		Symbols::open(self.0.name())
+	fn symbols(&self) -> Symbols {
+		match Symbols::open(self.0.name()) {
+			Ok(symbols) => symbols,
+			Err(error) => {
+				panic!("`dlopen` on a loaded object failed: {error}")
+			}
+		}
 	}
 	fn symbol(&self, symbols: &Symbols, name: &CStr) -> *mut () {
 		symbols.symbol(name) as _
@@ -124,7 +132,7 @@ impl Objects {
 		let mut result = None;
 		let mut result_mut = &mut result;
 		let mut f_once = ManuallyDrop::new(f);
-		self.for_each_object(&mut move |object| {
+		let _ = self.for_each_object(&mut move |object| {
 			if crate::util::check_lib_name(object.name().to_bytes(), name_bytes) {
 				// SAFETY: We end the iteration after this by returning `ControlFlow::Break`.
 				unsafe {
@@ -142,7 +150,7 @@ impl Objects {
 	pub fn find_map<R, F: FnMut(ModuleName<'_>, Object<'_>) -> Option<R>>(&self, mut f: F) -> Option<R> {
 		let mut result = None;
 		let mut result_mut = &mut result;
-		self.for_each_object(&mut move |object| {
+		let _ = self.for_each_object(&mut move |object| {
 			if let Some(t) = f(object.name(), Object(object)) {
 				*result_mut = Some(t);
 				ControlFlow::Break(())
@@ -154,7 +162,7 @@ impl Objects {
 	}
 
 	pub fn fill_map<'a, M: ?Sized + ObjectMap<'a>>(&self, map: &mut M) {
-		self.for_each_object(&mut move |object| {
+		let _ = self.for_each_object(&mut move |object| {
 			if map.is_full() {
 				return ControlFlow::Break(())
 			}
@@ -191,6 +199,10 @@ super::transparent_wrapper! {
 	pub struct UnixObject for dl_phdr_info;
 }
 impl UnixObject {
+	pub fn is_main_program(&self) -> bool {
+		self.name().is_empty()
+	}
+
 	pub const fn base_addr(&self) -> usize {
 		self.0.dlpi_addr as _
 	}
